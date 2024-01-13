@@ -20,8 +20,7 @@ export type PostEventType = {
   | "post.updated"
   | "post.deleted";
   data: {
-    comment: CommentType;
-    postId: string;
+    post: PostType;
   };
 };
 export type CommentEventType = {
@@ -30,5 +29,9 @@ export type CommentEventType = {
   | "comment.updated"
   | "comment.moderated"
   | "comment.deleted";
+  data: {
+    comment: CommentType;
+    postId: string;
+  };
 };
 export type EventType = PostEventType | CommentEventType;
