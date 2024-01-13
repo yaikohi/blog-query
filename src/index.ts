@@ -1,11 +1,12 @@
 import cors from "@elysiajs/cors";
-import { Elysia } from "elysia";
-import { EventType, PostDBType } from "./types";
+import { Elysia, t } from "elysia";
+import { CommentType, EventType, PostDBType, PostType } from "./types";
+import { EventBodySchema } from "./schemas";
 
 const PORT = 4002;
 // --- POSTS DB
-export const DB: PostDBType = {};
-export const posts = () =>
+const DB: PostDBType = {};
+const posts = () =>
   Object.entries(DB).map(([k, v]) => ({
     id: k,
     title: v.title,
@@ -20,22 +21,13 @@ const handleEvent = async ({ data, type }: EventType) => {
   }
   if (type === "comment.created") {
     const { comment, postId } = data;
-
-    const postInDB = DB[postId];
-
-    if (!postInDB.comments) {
-      postInDB.comments = [];
-    }
-    // ???
-    DB[postId].comments!.push(comment);
+    // @ts-ignore
+    DB[postId].comments.push(comment);
   }
 
   if (type === "comment.updated") {
     const { comment, postId } = data;
     const post = DB[postId];
-    if (!post.comments) {
-      post.comments = [];
-    }
     const commentFromPost = post.comments.find((cmnt) =>
       cmnt.id === comment.id
     );
@@ -49,10 +41,71 @@ const handleEvent = async ({ data, type }: EventType) => {
   }
 };
 // -- APP
-export const app = new Elysia();
+const app = new Elysia();
 // --- MIDDLEWARE
 app
   .use(cors());
+// --- ROUTES
+app
+  .get("/", () => "Hello Elysia")
+  // ---- POSTS
+  .group("/posts", (app) =>
+    app
+      .get("/", () => {
+        return posts();
+      }))
+  // ---- EVENTS
+  .group("/events", (app) =>
+    app
+      .post("/", async ({ body, set }) => {
+        set.status = "OK";
+        const { type, data } = body;
+
+        if (type === "post.created") {
+          if (!data?.post) {
+            set.status = "Not Found";
+            return {
+              success: false,
+              message: "There was no 'post' provided. ",
+            };
+          }
+
+          const post = data.post;
+
+          DB[post.id] = post as PostType;
+        }
+        if (type === "comment.created") {
+          const { comment, postId } = data;
+          if (!DB[postId].comments) {
+            DB[postId].comments = [];
+          }
+
+          DB[postId].comments.push(comment as CommentType);
+        }
+
+        if (type === "comment.updated") {
+          const { comment, postId } = data;
+          const post = DB[postId];
+          const commentFromPost = post.comments.find((cmnt) =>
+            cmnt.id === comment.id
+          );
+
+          if (!commentFromPost) {
+            set.status = "Not Found";
+            return { success: false, message: "Comment not found." };
+          }
+
+          commentFromPost.status = comment.status as CommentType["status"];
+          commentFromPost.content = comment.content;
+          set.status = "OK";
+          return {
+            success: true,
+            message: "Comment was updated.",
+          };
+        }
+      }, {
+        body: EventBodySchema,
+      }));
 app
   .listen(PORT, async () => {
     console.log(
