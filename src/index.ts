@@ -3,6 +3,13 @@ import { Elysia, t } from "elysia";
 import { CommentType, EventType, PostDBType, PostType } from "./types";
 import { EventBodySchema } from "./schemas";
 
+// --- SERVICES -- PORTS
+const PORT_EVENTBUS = `4005`;
+// --- SERVICES -- HOSTS
+const HOST_EVENTBUS = `event-bus-srv`;
+// --- URLS
+export const URL_EVENTBUS = `http://${HOST_EVENTBUS}:${PORT_EVENTBUS}/events`;
+
 const PORT = 4002;
 // --- POSTS DB
 const DB: PostDBType = {};
@@ -80,6 +87,7 @@ app
             DB[postId].comments = [];
           }
 
+          // @ts-ignore: I don't know what is happening here.
           DB[postId].comments.push(comment as CommentType);
         }
 
@@ -112,7 +120,7 @@ app
       `🦊 Elysia is running the 'query' service at ${app.server?.hostname}:${app.server?.port}`,
     );
 
-    const res = await fetch(`http://localhost:4005/events`, { method: "GET" });
+    const res = await fetch(URL_EVENTBUS, { method: "GET" });
     const result = await res.json();
 
     for (let event of result) {
@@ -120,7 +128,7 @@ app
       handleEvent({ type: event.type, data: event.data });
     }
   });
-
+// ---- TEST
 // app.handle(
 //   new Request(`http://localhost:4002/events`, {
 //     method: "POST",
