@@ -1,52 +1,11 @@
 import cors from "@elysiajs/cors";
-import { Elysia, t } from "elysia";
-import { CommentType, EventType, PostDBType, PostType } from "./types";
+import { Elysia } from "elysia";
+import { CommentType, PostType } from "./types";
 import { EventBodySchema } from "./schemas";
-
-// --- SERVICES -- PORTS
-const PORT_EVENTBUS = `4005`;
-// --- SERVICES -- HOSTS
-const HOST_EVENTBUS = `event-bus-srv`;
-// --- URLS
-export const URL_EVENTBUS = `http://${HOST_EVENTBUS}:${PORT_EVENTBUS}/events`;
+import { getURL, handleEvent } from "./utils";
+import { DB, posts } from "./database";
 
 const PORT = 4002;
-// --- POSTS DB
-const DB: PostDBType = {};
-const posts = () =>
-  Object.entries(DB).map(([k, v]) => ({
-    id: k,
-    title: v.title,
-    content: v.content,
-    comments: v.comments,
-  }));
-
-export const handleEvent = async ({ data, type }: EventType) => {
-  if (type === "post.created") {
-    const post = data.post;
-    DB[post.id] = post;
-  }
-  if (type === "comment.created") {
-    const { comment, postId } = data;
-    // @ts-ignore
-    DB[postId].comments.push(comment);
-  }
-
-  if (type === "comment.updated") {
-    const { comment, postId } = data;
-    const post = DB[postId];
-    const commentFromPost = post.comments.find((cmnt) =>
-      cmnt.id === comment.id
-    );
-
-    if (!commentFromPost) {
-      return { success: false, message: "Comment not found." };
-    }
-
-    commentFromPost.status = comment.status;
-    commentFromPost.content = comment.content;
-  }
-};
 // -- APP
 const app = new Elysia();
 // --- MIDDLEWARE
@@ -58,7 +17,7 @@ app
   .group("/posts", (app) =>
     app
       .get("/", () => {
-        return posts();
+        return posts;
       }))
   // ---- EVENTS
   .group("/events", (app) =>
@@ -123,8 +82,8 @@ app
     console.log(
       `🦊 Elysia is running the 'query' service at ${app.server?.hostname}:${app.server?.port}`,
     );
-
-    const res = await fetch(URL_EVENTBUS, { method: "GET" });
+    const url = getURL();
+    const res = await fetch(url, { method: "GET" });
     const result = await res.json();
 
     for (let event of result) {
