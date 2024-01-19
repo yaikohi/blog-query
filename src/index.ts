@@ -21,7 +21,7 @@ const posts = () =>
     comments: v.comments,
   }));
 
-const handleEvent = async ({ data, type }: EventType) => {
+export const handleEvent = async ({ data, type }: EventType) => {
   if (type === "post.created") {
     const post = data.post;
     DB[post.id] = post;
@@ -54,7 +54,6 @@ app
   .use(cors());
 // --- ROUTES
 app
-  .get("/", () => "Hello Elysia")
   // ---- POSTS
   .group("/posts", (app) =>
     app
@@ -65,7 +64,6 @@ app
   .group("/events", (app) =>
     app
       .post("/", async ({ body, set }) => {
-        set.status = "OK";
         const { type, data } = body;
 
         if (type === "post.created") {
@@ -80,6 +78,9 @@ app
           const post = data.post;
 
           DB[post.id] = post as PostType;
+
+          set.status = "OK";
+          return { success: true, message: `${type} handled.` };
         }
         if (type === "comment.created") {
           const { comment, postId } = data;
@@ -89,6 +90,9 @@ app
 
           // @ts-ignore: I don't know what is happening here.
           DB[postId].comments.push(comment as CommentType);
+
+          set.status = "OK";
+          return { success: true, message: `${type} handled.` };
         }
 
         if (type === "comment.updated") {
