@@ -88,8 +88,10 @@ app
 
     for (let event of result) {
       console.log(`Processing event: ${event.type}`);
-      handleEvent({ type: event.type, data: event.data });
+      await handleEvent({ type: event.type, data: event.data });
     }
+
+    console.log(`Done.`);
   });
 // ---- TEST
 // app.handle(

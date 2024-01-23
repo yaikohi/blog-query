@@ -16,15 +16,20 @@ export const getURL = (): string => {
   }
 };
 
-export const handleEvent = async ({ data, type }: EventType) => {
+export const handleEvent = async (
+  { data, type }: EventType,
+): Promise<void | { success: boolean; message: string }> => {
   if (type === "post.created") {
     const post = data.post;
     DB[post.id] = post;
+    return;
   }
   if (type === "comment.created") {
     const { comment, postId } = data;
     // @ts-ignore
     DB[postId].comments.push(comment);
+
+    return;
   }
 
   if (type === "comment.updated") {
@@ -40,5 +45,7 @@ export const handleEvent = async ({ data, type }: EventType) => {
 
     commentFromPost.status = comment.status;
     commentFromPost.content = comment.content;
+
+    return;
   }
 };
